@@ -41,6 +41,7 @@ StaySharp/
 │   └── commands/
 │       ├── setup.md                             ← /setup command
 │       ├── create-suite.md                      ← /create-suite command
+│       ├── check.md                             ← /check command
 │       └── run-suite.md                         ← /run-suite command
 ├── results/                                     ← archived run results (markdown)
 │   └── .gitkeep
@@ -115,6 +116,16 @@ Generates challenge directories with paired test files.
 - `languages` — comma-separated: `python`, `typescript`, `go`, `java` (default: all four)
 
 Challenges are distributed evenly. Each run uses varied categories and difficulties.
+
+---
+
+### `/check`
+
+Runs all active test suites and reports pass/fail per challenge. Nothing is archived, deleted, or regenerated — use this for a mid-session progress check.
+
+```
+/check
+```
 
 ---
 

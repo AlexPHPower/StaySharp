@@ -23,13 +23,14 @@ StaySharp has no challenge files committed to the repo. Everything is generated 
 | Command | What it does |
 |---|---|
 | `/create-suite` | Generates a batch of challenge directories + test files |
+| `/check` | Runs all test suites and reports progress — nothing is changed |
 | `/run-suite` | Runs tests, archives results, regenerates fresh challenges |
 | `/setup` | Installs all language dependencies from the repo root |
 
 The typical loop:
 
 ```
-/create-suite → fix challenges → run tests → /run-suite → repeat
+/create-suite → fix challenges → /check → fix more → /run-suite → repeat
 ```
 
 ---
@@ -92,9 +93,19 @@ Open the challenge directories and read the code. Each challenge has:
 
 Your job: figure out what's wrong and fix it.
 
-### 5. Verify your fixes
+### 5. Check your progress
 
-Run tests for whichever language you're working in:
+At any point, run `/check` to see the current state across all active challenges:
+
+```
+/check
+```
+
+This runs all test suites and reports pass/fail per challenge. Nothing is archived or deleted — it's a read-only progress report. Use it as often as you like between fixes.
+
+You can also run tests directly for a single language:
+
+### 5a. Run tests manually per language
 
 ```bash
 # Python
@@ -230,6 +241,40 @@ Claude will not overwrite existing challenge directories. If challenges already 
 
 ---
 
+### `/check`
+
+```
+/check
+```
+
+Runs all active test suites and reports results per challenge. **Nothing is modified** — no files are archived, deleted, or regenerated.
+
+Use this as often as you like mid-session. Example output:
+
+```
+StaySharp Check — 09:15:00
+──────────────────────────────────────────────
+Python
+  ✅  discount_calculator   4/4 tests passing
+  ❌  date_range_validator  2/3 tests passing
+        FAILED: test_excludes_weekends
+
+TypeScript
+  ✅  parseUserInput        3/3 tests passing
+
+Go
+  ❌  inventory_counter     1/4 tests passing
+        FAILED: TestHandlesZeroStock
+        FAILED: TestNegativeQuantityReturnsError
+        FAILED: TestTotalWithMixedItems
+
+──────────────────────────────────────────────
+Overall: 10/14 passing across 4 challenges
+When you're ready to finish: /run-suite
+```
+
+---
+
 ### `/run-suite`
 
 ```
@@ -308,6 +353,7 @@ StaySharp/
 │   └── commands/
 │       ├── setup.md                             ← /setup
 │       ├── create-suite.md                      ← /create-suite
+│       ├── check.md                             ← /check
 │       └── run-suite.md                         ← /run-suite
 ├── results/                                     ← archived run results
 ├── python/
