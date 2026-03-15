@@ -10,18 +10,18 @@ Generate a fresh set of coding challenges with paired test files.
 
 ## Arguments
 
-- `count` — number of challenges to generate (default: 5)
+- `count` — number of challenges to generate **per language** (default: 4)
 - `languages` — comma-separated list: `python`, `typescript`, `go`, `java` (default: all four)
 
-Example: `/create-suite count=3 languages=python,typescript`
+Example: `/create-suite count=2 languages=python,typescript` — generates 2 challenges per language (4 total)
 
 ## Instructions
 
 ### 1. Parse Arguments
 
-Extract `count` and `languages` from the arguments. Defaults: count=5, languages=python,typescript,go,java.
+Extract `count` and `languages` from the arguments. Defaults: count=4, languages=python,typescript,go,java.
 
-Distribute challenges as evenly as possible across the requested languages. If count doesn't divide evenly, give extra challenges to the first languages in the list.
+Generate `count` challenges for each language. Total challenges = `count × len(languages)`.
 
 ### 2. Select Categories
 
@@ -35,7 +35,7 @@ For each challenge, pick from this list. **Maximum one challenge per category pe
 - Date/time business logic
 - Data transformation
 
-Also assign a difficulty: `easy`, `medium`, or `hard`. Vary difficulties within a run — don't make them all the same.
+Also assign a difficulty: `easy`, `medium`, or `hard`. For a set of 4 challenges per language, target this distribution: **1 easy, 2 medium, 1 hard**. Scale proportionally for other counts. Never make them all the same difficulty.
 
 ### 3. Design the Challenge Structure
 
@@ -67,16 +67,29 @@ For each challenge, generate **all files simultaneously** (main, helpers, and te
 - **inverted condition** — condition is negated when it shouldn't be
 
 **Main/entry file** must include at the top:
-- A module-level docstring with: challenge name, category, difficulty, and a clear task description
+- A module-level docstring with: challenge name, category, difficulty, defect type, and a clear task description. Format:
+  ```
+  Challenge: discount_calculator
+  Category: Financial calculations
+  Difficulty: medium
+  Defect type: wrong formula
+  Task: Implement a discount calculator that applies tiered discounts...
+  ```
 
-**The file containing the bug** must include:
-- Exactly one `# BUG:` comment on the defective line — names the problem category (e.g., `# BUG: off-by-one`) without revealing the fix
+**The file containing the bug**:
+- Contains the defect with **no comment, marker, or annotation** on or near the defective line
+- The bug must look like plausible, competent code — not an obvious typo or clearly wrong value
 
 **Supporting files** (helpers, validators, etc.):
 - Have clear, correct docstrings describing what each function does
-- No `# BUG:` comment — they are correct
+- Are genuinely correct — no bugs, no hints, no markers
 - Should feel like real utility modules (not obviously named "helpers")
 - Name them after what they do: `tax_calculator.py`, `validators.py`, `date_utils.py`, `formatter.ts`, etc.
+
+**Complexity requirements by difficulty:**
+- **Easy**: single file; bug requires understanding the function's logic, not just spotting a typo
+- **Medium**: 2–3 files; bug requires reading the main file and at least one helper to understand the full flow; the bug could plausibly be in either
+- **Hard**: 3–4 files; bug is buried in a helper file; the developer must trace through the main function's delegation chain to reach it; the bug must be domain-logic-level, not syntactic
 
 ---
 
@@ -139,11 +152,11 @@ java/src/test/java/challenges/discountCalculator/
 After generating all files, print a summary table:
 
 ```
-| # | Language   | Challenge               | Files                                              | Category               | Difficulty | Defect type        | Bug location         |
-|---|------------|-------------------------|----------------------------------------------------|------------------------|------------|--------------------|----------------------|
-| 1 | Python     | discount_calculator     | discount_calculator.py, tax_calculator.py          | Financial calculations | medium     | wrong formula      | tax_calculator.py    |
-| 2 | TypeScript | parseUserInput          | parseUserInput.ts, validators.ts                   | Data validation        | easy       | inverted condition | validators.ts        |
-| 3 | Go         | date_range              | date_range.go                                      | Date/time logic        | hard       | off-by-one         | date_range.go        |
+| # | Language   | Challenge               | Files                                              | Category               | Difficulty | Defect type        |
+|---|------------|-------------------------|----------------------------------------------------|------------------------|------------|--------------------|
+| 1 | Python     | discount_calculator     | discount_calculator.py, tax_calculator.py          | Financial calculations | medium     | wrong formula      |
+| 2 | TypeScript | parseUserInput          | parseUserInput.ts, validators.ts                   | Data validation        | easy       | inverted condition |
+| 3 | Go         | date_range              | date_range.go                                      | Date/time logic        | hard       | off-by-one         |
 ```
 
 ---
@@ -151,10 +164,12 @@ After generating all files, print a summary table:
 ## Constraints (always follow)
 
 - Never put the solution or the correct code in any comment
-- `# BUG:` names the problem type only — never the fix
-- Bugs must be subtle — a developer should need to trace logic across the codebase, not just glance at one line
+- **Never add any comment that marks, hints at, or is near the defective line** — no `# BUG:`, no `# TODO:`, no suspicious inline comments
+- Defect type is recorded only in the main/entry file's module docstring — never in source code
+- Bugs must be plausible — a competent developer could have written them; they should require understanding domain logic to identify
+- Bugs must be subtle — a developer should need to trace logic across files, not just glance at one line
 - Exactly **one bug per challenge** — never two defects in the same challenge, never a bug in a supporting file when there's already one in the main file
+- Hard challenges must place the bug in a helper/supporting file, not the main file
 - Supporting files must be genuinely correct — they are not decoys, they are real (correct) logic
 - Always generate all files for a challenge (main, helpers, test) — never partially
 - Never overwrite existing challenge files — if a directory already exists, skip it and note it in the summary
-- Single-file challenges are fine for `easy` difficulty; `medium` and `hard` challenges should usually span 2–3 files

@@ -38,11 +38,13 @@ No challenges ship in the repo. Everything is generated at runtime.
 StaySharp/
 ├── CLAUDE.md                                    ← you are here
 ├── .claude/
-│   └── commands/
-│       ├── setup.md                             ← /setup command
-│       ├── create-suite.md                      ← /create-suite command
-│       ├── check.md                             ← /check command
-│       └── run-suite.md                         ← /run-suite command
+│   └── skills/
+│       ├── setup/SKILL.md                       ← /setup
+│       ├── create-suite/SKILL.md                ← /create-suite
+│       ├── check/SKILL.md                       ← /check
+│       ├── run-suite/SKILL.md                   ← /run-suite
+│       ├── restart/SKILL.md                     ← /restart
+│       └── reset/SKILL.md                       ← /reset
 ├── results/                                     ← archived run results (markdown)
 │   └── .gitkeep
 ├── python/
@@ -105,17 +107,35 @@ Checks each language's current state, runs installs only where needed, and print
 Generates challenge directories with paired test files.
 
 ```
-/create-suite                              # 5 challenges across all 4 languages
-/create-suite count=3                      # 3 challenges across all 4 languages
-/create-suite languages=python,go          # 5 challenges in Python and Go only
+/create-suite                              # 4 challenges per language (16 total)
+/create-suite count=2                      # 2 challenges per language
+/create-suite languages=python,go          # 4 challenges each in Python and Go (8 total)
 /create-suite count=2 languages=typescript # 2 TypeScript challenges
 ```
 
 **Arguments:**
-- `count` — total number of challenges (default: 5)
+- `count` — number of challenges **per language** (default: 4)
 - `languages` — comma-separated: `python`, `typescript`, `go`, `java` (default: all four)
 
-Challenges are distributed evenly. Each run uses varied categories and difficulties.
+Each run uses varied categories and difficulties (default distribution: 1 easy, 2 medium, 1 hard per language).
+
+---
+
+### `/restart`
+
+Wipes all active challenges and regenerates a fresh set — without running tests or archiving results.
+
+```
+/restart                              # same count and languages as current suite
+/restart count=2                      # 2 challenges per language, same languages
+/restart languages=python,go          # same count, Python and Go only
+```
+
+Use this when a challenge feels wrong, you accidentally saw the answer, or you just want a different set.
+
+**Arguments:**
+- `count` — per language (default: matches current suite, or 4)
+- `languages` — comma-separated (default: matches current active languages, or all four)
 
 ---
 
@@ -193,17 +213,17 @@ cd java && mvn test -q
 
 Each challenge lives in its own subdirectory and may span 1–4 files. The intent is to mirror a real codebase: the main function delegates to helpers, validators, formatters, or data models. The developer must trace logic across files to find the bug.
 
-- **Main/entry file**: contains the public function the tests call; has the module-level docstring with challenge metadata
+- **Main/entry file**: contains the public function the tests call; has the module-level docstring with challenge metadata (name, category, difficulty, defect type, task description)
 - **Supporting files**: named after what they do (`tax_calculator.py`, `validators.ts`, `date_utils.go`) — these are genuinely correct; they are not decoys
-- **The bug**: lives in exactly one file (could be main or a helper); marked with a single `# BUG:` comment
+- **The bug**: lives in exactly one file (could be main or a helper); **no comment or marker identifies it** — the defect type appears only in the main file's docstring
 
 ### Difficulty and File Count
 
-| Difficulty | Typical file count | Bug location tendency  |
-|------------|--------------------|------------------------|
-| easy       | 1                  | Main file              |
-| medium     | 2–3                | Main or one helper     |
-| hard       | 3–4                | Buried in a helper     |
+| Difficulty | Typical file count | Bug location                          | Complexity bar                                      |
+|------------|--------------------|---------------------------------------|-----------------------------------------------------|
+| easy       | 1                  | Main file                             | Requires understanding the function's domain logic  |
+| medium     | 2–3                | Main or one helper                    | Must read ≥2 files to understand full flow          |
+| hard       | 3–4                | Buried in a helper (required)         | Domain-logic-level bug; delegation chain must be traced |
 
 ---
 
@@ -235,7 +255,7 @@ Each challenge has exactly one intentional defect (across all its files):
 | Incomplete implementation| Returns early, skips a case                |
 | Inverted condition       | `not is_valid` when `is_valid` is correct  |
 
-The `# BUG:` comment in the defective file names the defect type — not the fix.
+The defect type is recorded only in the main/entry file's module docstring. No marker, comment, or annotation appears in the source code on or near the defective line.
 
 ---
 
@@ -252,10 +272,13 @@ Each file contains:
 ## Constraints for Claude When Generating
 
 - Never put the solution or correct code in any comment
-- `# BUG:` names the problem type only — never the fix
-- Exactly **one bug per challenge** — never two defects, never a bug in a helper when the main file already has one
-- Supporting files must be correct — they are real logic, not decoys
+- **Never add any comment that marks, hints at, or is near the defective line** — no `# BUG:`, no suspicious annotations
+- Defect type is recorded only in the main/entry file's module docstring
+- Bugs must be plausible — a competent developer could have written them; must require understanding domain logic to identify
 - Bugs must be non-trivial — the developer should need to trace across files, not just glance at one line
+- Exactly **one bug per challenge** — never two defects, never a bug in a helper when the main file already has one
+- Hard challenges must place the bug in a helper/supporting file, not the main file
+- Supporting files must be correct — they are real logic, not decoys
 - Always generate all files for a challenge simultaneously — never partially
 - Test names describe behavior, not the bug (no hints)
 - At least 1 happy path + 2 edge cases + 1 test that fails against the buggy implementation

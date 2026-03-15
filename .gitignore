@@ -1,0 +1,21 @@
+# Generated challenge directories
+python/challenges/*/
+typescript/challenges/*/
+go/challenges/*/
+java/src/main/java/challenges/*/
+
+# Generated test files
+python/tests/test_*.py
+typescript/tests/*.test.ts
+java/src/test/java/challenges/*/
+
+# Dependencies and build output
+typescript/node_modules/
+typescript/dist/
+typescript/package-lock.json
+java/target/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
