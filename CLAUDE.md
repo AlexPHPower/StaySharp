@@ -44,8 +44,11 @@ StaySharp/
 │       ├── check/SKILL.md                       ← /check
 │       ├── run-suite/SKILL.md                   ← /run-suite
 │       ├── restart/SKILL.md                     ← /restart
-│       └── reset/SKILL.md                       ← /reset
+│       ├── reset/SKILL.md                       ← /reset
+│       └── benchmark/SKILL.md                   ← /benchmark
 ├── results/                                     ← archived run results (markdown)
+│   └── .gitkeep
+├── benchmarks/                                  ← per-challenge performance history (JSON)
 │   └── .gitkeep
 ├── python/
 │   ├── pyproject.toml                           ← pytest config
@@ -149,6 +152,18 @@ Runs all active test suites and reports pass/fail per challenge. Nothing is arch
 
 ---
 
+### `/benchmark`
+
+Run performance tests for efficiency challenges and compare against your previous best.
+
+```
+/benchmark
+```
+
+Detects active efficiency challenges (those with `Defect type: inefficient implementation`), runs their performance test files, compares against stored baselines in `benchmarks/current.json`, and prints a summary. Use this to establish a baseline before optimising, then run again after to confirm improvement.
+
+---
+
 ### `/run-suite`
 
 Runs all test suites, archives results, regenerates fresh challenges.
@@ -219,11 +234,25 @@ Each challenge lives in its own subdirectory and may span 1–4 files. The inten
 
 ### Difficulty and File Count
 
-| Difficulty | Typical file count | Bug location                          | Complexity bar                                      |
-|------------|--------------------|---------------------------------------|-----------------------------------------------------|
-| easy       | 1                  | Main file                             | Requires understanding the function's domain logic  |
-| medium     | 2–3                | Main or one helper                    | Must read ≥2 files to understand full flow          |
-| hard       | 3–4                | Buried in a helper (required)         | Domain-logic-level bug; delegation chain must be traced |
+| Difficulty | Typical file count | Bug location                          | Complexity bar                                                                                                                        |
+|------------|--------------------|---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| easy       | 1                  | Main file                             | Function body ≥15 lines; bug is a domain logic error; generic algorithm names only allowed if wrapped in a domain scenario            |
+| medium     | 2–3                | Main or one helper                    | Each helper ≥10 lines of real computation; bug can only be pinpointed by understanding the interaction between files; all variable names are domain-specific |
+| hard       | 3–4                | Buried in a helper (required)         | No standalone algorithm functions — all logic embedded in domain scenarios; defective line must look like correct, competent code; reading the main file alone is insufficient |
+
+### Complexity Quality Bar
+
+Before accepting any challenge design, apply these two tests:
+
+- **The domain test** — "Could you find this bug knowing only the algorithm, without understanding the business domain?" If yes, the challenge is not hard enough — the bug must require domain knowledge, not just algorithmic pattern recognition.
+- **The unremarkable line test** — "Does the defective line stand out syntactically or structurally?" If yes, make the bug more subtle or move it deeper. The defective line must look like ordinary, competent code.
+
+**Anti-patterns — never generate:**
+- A function named after an algorithm at medium/hard (e.g., `sliding_window`, `binary_search`) — embed the algorithm in a domain scenario
+- A bug where the variable name makes the error self-evident (e.g., `maxSize + 1` in a function called `get_window_size`)
+- Helper files that are purely input validators — they must contain real computation the main function depends on
+- A challenge where the defective line is the most syntactically interesting line in the file
+- Generic variable names (`n`, `arr`, `i`, `result`) as the primary domain variables in medium/hard challenges
 
 ---
 
@@ -231,15 +260,16 @@ Each challenge lives in its own subdirectory and may span 1–4 files. The inten
 
 Challenges are drawn from these categories (max one per category per language per run):
 
-| Category                  | Example                                         |
-|---------------------------|-------------------------------------------------|
-| Algorithm                 | Binary search, sorting, graph traversal         |
-| String manipulation       | Parsing, formatting, pattern matching           |
-| Business logic            | Discount tiers, eligibility rules, workflows    |
-| Financial calculations    | Interest, tax, currency rounding                |
-| Data validation           | Input sanitization, format checks               |
-| Date/time business logic  | Business days, deadlines, scheduling            |
-| Data transformation       | Aggregation, filtering, reshaping               |
+| Category                  | Example                                                                      |
+|---------------------------|------------------------------------------------------------------------------|
+| Algorithm                 | Binary search, sorting, graph traversal                                      |
+| String manipulation       | Parsing, formatting, pattern matching                                        |
+| Business logic            | Discount tiers, eligibility rules, workflows                                 |
+| Financial calculations    | Interest, tax, currency rounding                                             |
+| Data validation           | Input sanitization, format checks                                            |
+| Date/time business logic  | Business days, deadlines, scheduling                                         |
+| Data transformation       | Aggregation, filtering, reshaping                                            |
+| Performance optimization  | Redundant computation, O(n²) replaced by O(n), unnecessary passes over data |
 
 ---
 
@@ -247,13 +277,14 @@ Challenges are drawn from these categories (max one per category per language pe
 
 Each challenge has exactly one intentional defect (across all its files):
 
-| Defect type              | Example                                    |
-|--------------------------|--------------------------------------------|
-| Logic bug                | `and` instead of `or`                      |
-| Off-by-one               | `<` instead of `<=`                        |
-| Wrong formula            | Divides by 100 instead of 1000             |
-| Incomplete implementation| Returns early, skips a case                |
-| Inverted condition       | `not is_valid` when `is_valid` is correct  |
+| Defect type                | Example                                                                                                                                          |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| Logic bug                  | `and` instead of `or`                                                                                                                            |
+| Off-by-one                 | `<` instead of `<=`                                                                                                                              |
+| Wrong formula              | Divides by 100 instead of 1000                                                                                                                   |
+| Incomplete implementation  | Returns early, skips a case                                                                                                                      |
+| Inverted condition         | `not is_valid` when `is_valid` is correct                                                                                                        |
+| Inefficient implementation | Correct result, suboptimal approach — e.g., list scan instead of set lookup, O(n²) nested loop fixable with a hash map, recomputing a value inside a loop that should be cached |
 
 The defect type is recorded only in the main/entry file's module docstring. No marker, comment, or annotation appears in the source code on or near the defective line.
 
@@ -281,5 +312,7 @@ Each file contains:
 - Supporting files must be correct — they are real logic, not decoys
 - Always generate all files for a challenge simultaneously — never partially
 - Test names describe behavior, not the bug (no hints)
-- At least 1 happy path + 2 edge cases + 1 test that fails against the buggy implementation
+- At least 1 happy path + 2 edge cases + 1 test that fails against the buggy implementation (omit this requirement for `inefficient implementation` challenges — all tests must pass against the unoptimised code)
 - Never overwrite existing challenge directories
+- Medium/hard challenges must use domain-specific variable names throughout — no `n`, `arr`, `i`, `result` as primary domain variables
+- **Efficiency challenge rules**: task description must state current and target complexity (e.g., "Currently O(n²) — optimise to O(n)"); generate a separate performance test file alongside the regular test file (see `/benchmark` docs for file naming)
